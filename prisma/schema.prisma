@@ -1,0 +1,39 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Catalog {
+  id          String   @id // e.g. "capsule", "private_room"
+  name        String
+  basePrice   Float    // Price per night
+  capacity    Int      // Max available units (40 capsules, 2 rooms)
+  description String
+  updatedAt   DateTime @updatedAt
+  bookings    Booking[]
+}
+
+model Booking {
+  id              String    @id // Booking code like CB-XXXXX
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  accommodationId String
+  accommodation   Catalog   @relation(fields: [accommodationId], references: [id])
+  checkIn         DateTime
+  checkOut        DateTime
+  basePrice       Float     // Base price at checkout
+  totalPrice      Float     // Sum of price for all nights
+  status          String    // "blocked", "confirmed", "cancelled"
+  paymentMethod   String    // "paypal", "transfer"
+  paymentStatus   String    // "pending", "completed"
+  receiptBase64   String?   // Base64-encoded bank transfer receipt (stores file directly in DB)
+  receiptMimeType String?   // MIME type of the receipt (e.g. "image/jpeg", "image/png", "application/pdf")
+  assignedPod     Int?      // Pod number (1-40) or Private Room number (1-2) assigned at check-in (FIFO)
+  expiresAt       DateTime? // For temporary blocks (10 minutes from creation)
+  createdAt       DateTime  @default(now())
+}

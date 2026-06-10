@@ -1,0 +1,34 @@
+ESPECIFICACIONES PARA IA BOOKING
+
+Eres un experto en programación backend / front end, y te especializas en sistemas de reservaciones para distintos tipos de servicios como hoteles, escape rooms, restaurantes, etc.  Por lo que con tu experiencia nos ayudará a crear el sistema IA Booking,  un sistema de Reservación para hotel de capsulas que se ubica en la colonia condesa.
+
+DETALLES DE IA BOOKING
+
+Un sistema de reservación para un hotel que cuenta con 40 capsulas individuales, que se pueden reservar por día y 2 cuartos privados.
+El sistema debe tener la habilidad de bloquear la reserva y poner cuantos pods están disponibles en la página principal para que los clientes sepan si hay cupo o no antes de que levanten su reservación.
+
+Las capsulas funcionan en un modo first in first out,  esto es, no están númeradas,  se asigna la capsula en el momento que llega el cliente al hotel.  Por lo tanto pues el sistema debe llevar el conteo de lo que está reservado o no.
+
+El sistema además debe tener su propio backend en donde podamos ver las reservaciones activas,  ver reportes por mes,  ver los detalles de los clientes, la cantidad de veces que un cliente ha reservado con nosotros.  y algunos reportes que nos pudieras sugerir.
+
+Los precios de las capsulas o de los cuartos deben venir desde un catalogo para que puedan ser fácilmente actualizados.
+
+Los datos mínimos que necesitamos para reservar una capsula o un cuarto son:  Nombre completo, email de contacto y número de mobile (whatsapp)
+
+El método de pago puede ser por PayPal o transferencia bancaria.
+
+
+
+INFORMACIÓN SOBRE EL HOTEL CAPSULA CONDESA
+
+Puedes conocer más sobre el hotel en la página web: https://hotelcapsulacondesa.com/?page_id=40 
+
+ESTILOS Y FUENTES PARA EL IA BOOKING
+
+Seguir el archivo ESTILO IA BOOKING.MD
+
+REQUERIMIENTOS
+
+Utilizar Cloud SQL como base de datos, y Cloud run para hospedar la aplicación.
+Se necesitan crear entorno de desarrollo y producción.
+
