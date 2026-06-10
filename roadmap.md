@@ -63,3 +63,10 @@ Este documento define el mapa de ruta (roadmap) para el desarrollo, despliegue y
 - [x] **Manual de Despliegue**:
   - Crear guías paso a paso para la replicación del entorno.
 
+---
+
+## ⚡ Fase 6: Verificación y Lanzamiento en Producción (Completado)
+- [x] **Prueba de Conexión Segura**: Configurar la variable `DATABASE_URL` codificando los caracteres especiales de la contraseña y la ruta de conexión del socket de Cloud SQL.
+- [x] **Prueba de Extremo a Extremo en Producción**: Validar que la aplicación en Cloud Run se conecte exitosamente a la base de datos de producción (PostgreSQL en Cloud SQL) y permita el registro de reservas.
+
+
