@@ -69,4 +69,12 @@ Este documento define el mapa de ruta (roadmap) para el desarrollo, despliegue y
 - [x] **Prueba de Conexión Segura**: Configurar la variable `DATABASE_URL` codificando los caracteres especiales de la contraseña y la ruta de conexión del socket de Cloud SQL.
 - [x] **Prueba de Extremo a Extremo en Producción**: Validar que la aplicación en Cloud Run se conecte exitosamente a la base de datos de producción (PostgreSQL en Cloud SQL) y permita el registro de reservas.
 
+---
+
+## 🔒 Fase 7: Seguridad y Localización (Bilingüe) (Completado)
+- [x] **Aislamiento y Login del Administrador**: Proteger el portal administrativo `/admin` mediante un panel de inicio de sesión con credenciales específicas y almacenamiento seguro de la sesión.
+- [x] **Soporte Bilingüe (Español / Inglés)**: Implementar internacionalización (i18n) completa mediante diccionario dinámico (`translations.ts`) y selector de idioma en el menú superior.
+- [x] **Manual de Operación**: Crear y documentar el manual de usuario de administración en [documentación/manual-usuario-admin.md](file:///d:/PROYECTOS/CAPSULA%20CONDESA/IA-BOOKING/documentación/manual-usuario-admin.md).
+
+
 
