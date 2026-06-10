@@ -32,3 +32,7 @@ REQUERIMIENTOS
 Utilizar Cloud SQL como base de datos, y Cloud run para hospedar la aplicación.
 Se necesitan crear entorno de desarrollo y producción.
 
+Generar un roadmap.MD para llevar la bitacora de actualizaciones del sistema IA BOOKING
+
+
+

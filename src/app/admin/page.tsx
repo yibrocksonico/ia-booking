@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Calendar, Users, Settings, Search, DollarSign, Activity, Check, X, Eye, Key, Loader2, Sparkles, LogOut } from 'lucide-react';
+import { translations } from '@/lib/translations';
 
 interface Booking {
   id: string;
@@ -72,6 +73,16 @@ interface CatalogItem {
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'bookings' | 'customers' | 'catalog'>('dashboard');
   
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Language state
+  const [lang, setLang] = useState<'es' | 'en'>('es');
+
   // Data states
   const [stats, setStats] = useState<StatsData | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -101,8 +112,56 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchAdminData();
+    const savedLang = localStorage.getItem('capsule_lang') as 'es' | 'en';
+    if (savedLang === 'es' || savedLang === 'en') {
+      setLang(savedLang);
+    }
+
+    const auth = sessionStorage.getItem('capsule_admin_logged_in');
+    if (auth === 'true') {
+      setIsLoggedIn(true);
+      fetchAdminData();
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  const changeLang = (l: 'es' | 'en') => {
+    setLang(l);
+    localStorage.setItem('capsule_lang', l);
+  };
+
+  const t = (key: keyof typeof translations.es) => {
+    return translations[lang][key] || translations.es[key];
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError('');
+    
+    // Simulate delay
+    setTimeout(() => {
+      if (usernameInput === 'Capsule-admin26' && passwordInput === 'BDrtzD@jk91lL8_SNm53') {
+        sessionStorage.setItem('capsule_admin_logged_in', 'true');
+        setIsLoggedIn(true);
+        showToast(lang === 'es' ? 'Acceso autorizado.' : 'Access authorized.', 'success');
+        fetchAdminData();
+      } else {
+        setLoginError(t('login_error'));
+        showToast(t('login_error'), 'error');
+      }
+      setIsLoggingIn(false);
+    }, 800);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('capsule_admin_logged_in');
+    setIsLoggedIn(false);
+    setUsernameInput('');
+    setPasswordInput('');
+    showToast(lang === 'es' ? 'Sesión cerrada exitosamente.' : 'Logged out successfully.', 'info');
+  };
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -129,7 +188,10 @@ export default function AdminDashboard() {
   };
 
   const handleConfirmPayment = async (bookingId: string) => {
-    if (!confirm('¿Estás seguro de confirmar el pago de esta reserva?')) return;
+    const confirmMsg = lang === 'es'
+      ? '¿Estás seguro de confirmar el pago de esta reserva?'
+      : 'Are you sure you want to confirm payment for this booking?';
+    if (!confirm(confirmMsg)) return;
     setActionLoading(true);
     try {
       const res = await fetch('/api/bookings', {
@@ -138,7 +200,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ bookingId, action: 'confirm_payment' }),
       });
       if (res.ok) {
-        showToast('Pago confirmado correctamente y reserva activa.', 'success');
+        showToast(lang === 'es' ? 'Pago confirmado correctamente y reserva activa.' : 'Payment confirmed successfully and booking active.', 'success');
         await fetchAdminData();
       } else {
         const d = await res.json();
@@ -152,7 +214,10 @@ export default function AdminDashboard() {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm('¿Estás seguro de cancelar esta reserva? Liberará la disponibilidad inmediatamente.')) return;
+    const confirmMsg = lang === 'es'
+      ? '¿Estás seguro de cancelar esta reserva? Liberará la disponibilidad inmediatamente.'
+      : 'Are you sure you want to cancel this booking? This will release availability immediately.';
+    if (!confirm(confirmMsg)) return;
     setActionLoading(true);
     try {
       const res = await fetch('/api/bookings', {
@@ -161,7 +226,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ bookingId, action: 'cancel' }),
       });
       if (res.ok) {
-        showToast('Reserva cancelada con éxito.', 'info');
+        showToast(lang === 'es' ? 'Reserva cancelada con éxito.' : 'Booking cancelled successfully.', 'info');
         await fetchAdminData();
       } else {
         const d = await res.json();
@@ -189,7 +254,11 @@ export default function AdminDashboard() {
         }),
       });
       if (res.ok) {
-        showToast(`Check-in exitoso. Cabina #${assignedPodNumber} asignada.`, 'success');
+        showToast(lang === 'es' 
+          ? `Check-in exitoso. Cabina #${assignedPodNumber} asignada.` 
+          : `Check-in successful. Cabin #${assignedPodNumber} assigned.`, 
+          'success'
+        );
         setCheckingInBooking(null);
         setAssignedPodNumber('');
         await fetchAdminData();
@@ -206,7 +275,7 @@ export default function AdminDashboard() {
 
   const handleUpdatePrice = async (id: string) => {
     if (!newPriceValue || isNaN(parseFloat(newPriceValue))) {
-      showToast('Por favor introduce un precio numérico válido.', 'error');
+      showToast(t('admin_catalog_validation_error'), 'error');
       return;
     }
     setActionLoading(true);
@@ -217,7 +286,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ id, basePrice: parseFloat(newPriceValue) }),
       });
       if (res.ok) {
-        showToast('Tarifa actualizada correctamente en el catálogo.', 'success');
+        showToast(lang === 'es' ? 'Tarifa actualizada correctamente en el catálogo.' : 'Rate updated successfully in the catalog.', 'success');
         setUpdatingCatalogId(null);
         setNewPriceValue('');
         await fetchAdminData();
@@ -249,6 +318,132 @@ export default function AdminDashboard() {
     return matchesSearch;
   });
 
+  // Render Login Panel if not logged in
+  if (!isLoggedIn) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'radial-gradient(circle at center, rgba(16, 20, 38, 0.4) 0%, rgba(2, 4, 9, 1) 100%)', justifyContent: 'center', alignItems: 'center', padding: '1.5rem' }}>
+        
+        {/* Floating Language Toggle on Login */}
+        <div style={{ position: 'absolute', top: '24px', right: '24px' }}>
+          <button
+            onClick={() => changeLang(lang === 'es' ? 'en' : 'es')}
+            className="cyber-btn cyber-btn-outline"
+            style={{
+              padding: '0.4rem 0.8rem',
+              fontSize: '0.75rem',
+              fontFamily: 'var(--font-jetbrains-mono)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              cursor: 'pointer'
+            }}
+          >
+            <span>🌐</span>
+            <span style={{ fontWeight: 'bold' }}>{lang === 'es' ? 'EN' : 'ES'}</span>
+          </button>
+        </div>
+
+        <div className="glass-panel" style={{ maxWidth: '400px', width: '100%', border: 'var(--border-neon-magenta)', boxShadow: 'var(--glow-magenta)', padding: '2.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <img 
+              src="/logo-hotel-capsula-condesa-horiz.webp" 
+              alt="Cápsula Condesa Logo" 
+              style={{ height: '50px', objectFit: 'contain', margin: '0 auto 1.5rem auto' }}
+            />
+            <h2 className="text-glow-magenta" style={{ fontSize: '1.5rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {t('login_title')}
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+              {t('login_subtitle')}
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div className="cyber-form-group">
+              <label className="cyber-label">{t('login_username')}</label>
+              <input
+                type="text"
+                required
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                className="cyber-input"
+                style={{ width: '100%' }}
+                placeholder="Capsule-admin26"
+              />
+            </div>
+
+            <div className="cyber-form-group">
+              <label className="cyber-label">{t('login_password')}</label>
+              <input
+                type="password"
+                required
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="cyber-input"
+                style={{ width: '100%' }}
+                placeholder="••••••••••••••••••••"
+              />
+            </div>
+
+            {loginError && (
+              <div style={{ color: 'var(--color-magenta-neon)', padding: '0.75rem', background: 'rgba(255, 0, 150, 0.05)', border: 'var(--border-neon-magenta)', borderRadius: '6px', fontSize: '0.8rem', textAlign: 'center' }}>
+                {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="cyber-btn"
+              style={{ width: '100%', background: 'var(--color-magenta-neon)', color: '#ffffff', boxShadow: 'var(--glow-magenta-intense)', marginTop: '0.5rem' }}
+            >
+              {isLoggingIn ? (
+                <>
+                  <Loader2 className="pulse-indicator" style={{ width: '14px', height: '14px', marginRight: '0.5rem', animation: 'spin 1.5s linear infinite' }} />
+                  {t('login_loading')}
+                </>
+              ) : (
+                t('login_btn')
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Toast Notification */}
+        {toast.message && (
+          <div style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            background: 'rgba(21, 26, 46, 0.95)',
+            border: toast.type === 'success' ? '1px solid var(--color-cyan-neon)' : toast.type === 'error' ? '1px solid var(--color-magenta-neon)' : '1px solid var(--color-amber-gold)',
+            boxShadow: toast.type === 'success' ? 'var(--glow-cyan)' : toast.type === 'error' ? 'var(--glow-magenta)' : 'var(--glow-gold)',
+            color: '#ffffff',
+            padding: '1rem 1.5rem',
+            borderRadius: '10px',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontFamily: 'var(--font-space-grotesk)',
+            fontSize: '0.9rem',
+            backdropFilter: 'blur(12px)',
+            animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: toast.type === 'success' ? 'var(--color-cyan-neon)' : toast.type === 'error' ? 'var(--color-magenta-neon)' : 'var(--color-amber-gold)',
+              display: 'inline-block'
+            }} className="pulse-indicator"></span>
+            {toast.message}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
@@ -276,15 +471,33 @@ export default function AdminDashboard() {
                 IA BOOKING <span className="text-glow-magenta">CENTRAL</span>
               </h1>
               <p style={{ fontSize: '0.6rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }} className="mono-text">
-                Command Desk
+                {t('admin_subtitle')}
               </p>
             </div>
           </div>
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <a href="/" className="cyber-btn cyber-btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
-              Ver Portal Cliente
+              {t('admin_btn_client')}
             </a>
+
+            {/* Language Selector */}
+            <button
+              onClick={() => changeLang(lang === 'es' ? 'en' : 'es')}
+              className="cyber-btn cyber-btn-outline"
+              style={{
+                padding: '0.4rem 0.8rem',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-jetbrains-mono)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: 'pointer'
+              }}
+            >
+              <span>🌐</span>
+              <span style={{ fontWeight: 'bold' }}>{lang === 'es' ? 'EN' : 'ES'}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -300,7 +513,7 @@ export default function AdminDashboard() {
             style={{ width: '100%', justifyContent: 'flex-start' }}
           >
             <LayoutDashboard style={{ width: '16px', height: '16px' }} />
-            Dashboard
+            {t('admin_tab_dashboard')}
           </button>
           <button
             onClick={() => setActiveTab('bookings')}
@@ -308,7 +521,7 @@ export default function AdminDashboard() {
             style={{ width: '100%', justifyContent: 'flex-start' }}
           >
             <Calendar style={{ width: '16px', height: '16px' }} />
-            Reservas
+            {t('admin_tab_bookings')}
             {bookings.filter(b => b.status === 'blocked' && b.paymentStatus === 'pending' && b.receiptBase64).length > 0 && (
               <span className="mono-text text-glow-magenta" style={{ fontSize: '0.75rem', fontWeight: 'bold', marginLeft: 'auto', background: 'rgba(255,0,150,0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', border: '1px solid var(--color-magenta-neon)' }}>
                 {bookings.filter(b => b.status === 'blocked' && b.paymentStatus === 'pending' && b.receiptBase64).length}
@@ -321,7 +534,7 @@ export default function AdminDashboard() {
             style={{ width: '100%', justifyContent: 'flex-start' }}
           >
             <Users style={{ width: '16px', height: '16px' }} />
-            Clientes Frecuentes
+            {t('admin_tab_customers')}
           </button>
           <button
             onClick={() => setActiveTab('catalog')}
@@ -329,15 +542,24 @@ export default function AdminDashboard() {
             style={{ width: '100%', justifyContent: 'flex-start' }}
           >
             <Settings style={{ width: '16px', height: '16px' }} />
-            Tarifas Catálogo
+            {t('admin_tab_catalog')}
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="cyber-btn"
+            style={{ width: '100%', justifyContent: 'flex-start', background: 'rgba(255, 0, 150, 0.1)', color: 'var(--color-magenta-neon)', border: '1px solid var(--color-magenta-neon)', marginTop: '1.5rem' }}
+          >
+            <LogOut style={{ width: '16px', height: '16px' }} />
+            {t('admin_logout')}
           </button>
 
           <div style={{ marginTop: 'auto', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div className="glass-panel" style={{ padding: '0.75rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }} className="mono-text">ESTADO DB:</div>
+              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }} className="mono-text">{t('admin_db_status')}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-cyan-neon)', marginTop: '0.25rem' }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-cyan-neon)', display: 'inline-block' }} className="pulse-indicator"></span>
-                Cloud SQL Online (SQLite Local)
+                {t('admin_db_status_online')}
               </div>
             </div>
           </div>
@@ -348,7 +570,7 @@ export default function AdminDashboard() {
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '350px', gap: '1rem' }}>
               <Loader2 className="pulse-indicator" style={{ width: '40px', height: '40px', color: 'var(--color-magenta-neon)', animation: 'spin 1.5s linear infinite' }} />
-              <p className="mono-text" style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Cargando datos administrativos...</p>
+              <p className="mono-text" style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{t('admin_loading')}</p>
             </div>
           ) : (
             <>
@@ -358,32 +580,32 @@ export default function AdminDashboard() {
                   {/* Headline cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
                     <div className="glass-panel" style={{ borderBottom: '2px solid var(--color-cyan-neon)' }}>
-                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>Ingresos Confirmados</span>
+                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>{t('admin_metric_revenue')}</span>
                       <h4 style={{ fontSize: '1.75rem', marginTop: '0.25rem' }} className="mono-text text-glow-cyan">
                         ${stats.summary.totalRevenue.toLocaleString()} MXN
                       </h4>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Total acumulado pagado</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{t('admin_metric_revenue_sub')}</p>
                     </div>
                     <div className="glass-panel" style={{ borderBottom: '2px solid var(--color-magenta-neon)' }}>
-                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>Reservas Confirmadas</span>
+                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>{t('admin_metric_confirmed')}</span>
                       <h4 style={{ fontSize: '1.75rem', marginTop: '0.25rem' }} className="mono-text text-glow-magenta">
                         {stats.summary.confirmedBookings}
                       </h4>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Cápulas/Cuartos pagados</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{t('admin_metric_confirmed_sub')}</p>
                     </div>
                     <div className="glass-panel" style={{ borderBottom: '2px solid var(--color-amber-gold)' }}>
-                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>Por Verificar (Transf.)</span>
+                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>{t('admin_metric_pending')}</span>
                       <h4 style={{ fontSize: '1.75rem', marginTop: '0.25rem' }} className="mono-text text-glow-gold">
                         {stats.summary.pendingBookings}
                       </h4>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Bloqueos pendientes de pago</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{t('admin_metric_pending_sub')}</p>
                     </div>
                     <div className="glass-panel" style={{ borderBottom: '2px solid var(--color-blue-electric)' }}>
-                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>Clientes Únicos</span>
+                      <span className="cyber-label" style={{ fontSize: '0.7rem' }}>{t('admin_metric_customers')}</span>
                       <h4 className="mono-text" style={{ fontSize: '1.75rem', marginTop: '0.25rem', color: 'var(--color-blue-electric)' }}>
                         {stats.allCustomers.length}
                       </h4>
-                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Base de datos CRM</p>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{t('admin_metric_customers_sub')}</p>
                     </div>
                   </div>
 
@@ -392,9 +614,9 @@ export default function AdminDashboard() {
                     
                     {/* SVG Chart: Occupancy Rate */}
                     <div className="glass-panel">
-                      <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem' }}>Tasa de Ocupación Mensual (%)</h3>
+                      <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem' }}>{t('admin_chart_occupancy')}</h3>
                       {stats.monthlyReport.length === 0 ? (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem 0' }}>Sin datos de ocupación aún.</p>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem 0' }}>{t('admin_chart_occupancy_empty')}</p>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           {stats.monthlyReport.map((m, i) => (
@@ -413,16 +635,16 @@ export default function AdminDashboard() {
                               <span className="mono-text" style={{ width: '40px', textAlign: 'right', fontSize: '0.8rem', color: 'var(--color-cyan-neon)', fontWeight: 'bold' }}>{m.occupancyRate}%</span>
                             </div>
                           ))}
-                          <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginTop: '0.5rem', textAlign: 'right' }}>Calculado en base a 42 unidades totales.</p>
+                          <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginTop: '0.5rem', textAlign: 'right' }}>{t('admin_chart_occupancy_footnote')}</p>
                         </div>
                       )}
                     </div>
 
                     {/* SVG Chart: Monthly Revenue */}
                     <div className="glass-panel">
-                      <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem' }}>Ingresos Mensuales (MXN)</h3>
+                      <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem' }}>{t('admin_chart_revenue')}</h3>
                       {stats.monthlyReport.length === 0 ? (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem 0' }}>Sin datos de ingresos aún.</p>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '3rem 0' }}>{t('admin_chart_revenue_empty')}</p>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                           {stats.monthlyReport.map((m, i) => (
@@ -452,11 +674,21 @@ export default function AdminDashboard() {
                     
                     {/* Weekday demand */}
                     <div className="glass-panel">
-                      <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem' }}>Días de Mayor Demanda (Check-in)</h3>
+                      <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem' }}>{t('admin_chart_demand')}</h3>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '120px', padding: '0 0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                         {stats.demandByDay.map((d, i) => {
                           const maxCount = Math.max(...stats.demandByDay.map(x => x.count), 1);
                           const pct = (d.count / maxCount) * 85; // cap height at 85%
+                          
+                          // Translate day names
+                          let dayLabel = d.day;
+                          if (lang === 'en') {
+                            const dayMap: { [key: string]: string } = {
+                              'Lun': 'Mon', 'Mar': 'Tue', 'Mié': 'Wed', 'Jue': 'Thu', 'Vie': 'Fri', 'Sáb': 'Sat', 'Dom': 'Sun'
+                            };
+                            dayLabel = dayMap[d.day] || d.day;
+                          }
+
                           return (
                             <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, gap: '0.5rem' }}>
                               <span className="mono-text" style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)' }}>{d.count}</span>
@@ -467,7 +699,7 @@ export default function AdminDashboard() {
                                 boxShadow: 'var(--glow-cyan)',
                                 borderRadius: '3px 3px 0 0'
                               }}></div>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>{d.day}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>{dayLabel}</span>
                             </div>
                           );
                         })}
@@ -476,11 +708,11 @@ export default function AdminDashboard() {
 
                     {/* Stats Distribution */}
                     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <h3 style={{ fontSize: '1.1rem' }}>Distribución de Métodos y Alojamiento</h3>
+                      <h3 style={{ fontSize: '1.1rem' }}>{t('admin_chart_distribution')}</h3>
                       
                       <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-                          <span>Métodos de Pago:</span>
+                          <span>{t('admin_distribution_methods')}</span>
                           <span style={{ color: 'var(--color-text-primary)' }}>
                             PayPal: <span className="mono-text text-glow-cyan">{stats.paymentMethods.paypal}</span> | 
                             Transf: <span className="mono-text text-glow-gold">{stats.paymentMethods.transfer}</span>
@@ -490,10 +722,10 @@ export default function AdminDashboard() {
 
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-                          <span>Preferencias de Cabina:</span>
+                          <span>{t('admin_distribution_preferences')}</span>
                           <span style={{ color: 'var(--color-text-primary)' }}>
-                            Cápsulas: <span className="mono-text text-glow-cyan">{stats.accommodationDistribution.capsule}</span> | 
-                            Cuartos: <span className="mono-text text-glow-magenta">{stats.accommodationDistribution.privateRoom}</span>
+                            {lang === 'es' ? 'Cápsulas' : 'Pods'}: <span className="mono-text text-glow-cyan">{stats.accommodationDistribution.capsule}</span> | 
+                            {lang === 'es' ? 'Cuartos' : 'Rooms'}: <span className="mono-text text-glow-magenta">{stats.accommodationDistribution.privateRoom}</span>
                           </span>
                         </div>
                       </div>
@@ -512,7 +744,7 @@ export default function AdminDashboard() {
                       <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--color-text-muted)' }} />
                       <input
                         type="text"
-                        placeholder="Buscar por código, huésped, email, celular..."
+                        placeholder={t('admin_search_placeholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="cyber-input"
@@ -526,11 +758,11 @@ export default function AdminDashboard() {
                         onChange={(e) => setStatusFilter(e.target.value)}
                         className="cyber-select"
                       >
-                        <option value="all">Todos los Estados</option>
-                        <option value="pending">Por Verificar Pago</option>
-                        <option value="confirmed">Confirmados (Por Check-in)</option>
-                        <option value="checked_in">Check-in Realizado</option>
-                        <option value="cancelled">Cancelados</option>
+                        <option value="all">{t('admin_filter_all')}</option>
+                        <option value="pending">{t('admin_filter_pending')}</option>
+                        <option value="confirmed">{t('admin_filter_confirmed')}</option>
+                        <option value="checked_in">{t('admin_filter_checked_in')}</option>
+                        <option value="cancelled">{t('admin_filter_cancelled')}</option>
                       </select>
                     </div>
                   </div>
@@ -540,21 +772,21 @@ export default function AdminDashboard() {
                     <table className="cyber-table">
                       <thead>
                         <tr>
-                          <th>Código</th>
-                          <th>Huésped</th>
-                          <th>Fechas</th>
-                          <th>Alojamiento</th>
-                          <th>Cabina</th>
-                          <th>Pago</th>
-                          <th>Monto</th>
-                          <th>Acciones</th>
+                          <th>{t('admin_table_code')}</th>
+                          <th>{t('admin_table_guest')}</th>
+                          <th>{t('admin_table_dates')}</th>
+                          <th>{t('admin_table_accommodation')}</th>
+                          <th>{t('admin_table_pod')}</th>
+                          <th>{t('admin_table_payment')}</th>
+                          <th>{t('admin_table_amount')}</th>
+                          <th>{t('admin_table_actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredBookings.length === 0 ? (
                           <tr>
                             <td colSpan={8} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '3rem' }}>
-                              No se encontraron reservaciones que coincidan con los filtros.
+                              {t('admin_table_empty')}
                             </td>
                           </tr>
                         ) : (
@@ -571,16 +803,16 @@ export default function AdminDashboard() {
                                   <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{b.customerPhone} | {b.customerEmail}</div>
                                 </td>
                                 <td className="mono-text" style={{ fontSize: '0.8rem' }}>
-                                  {new Date(b.checkIn).toLocaleDateString('es-MX', { timeZone: 'UTC' })} ➜ <br/>
-                                  {new Date(b.checkOut).toLocaleDateString('es-MX', { timeZone: 'UTC' })}
+                                  {new Date(b.checkIn).toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { timeZone: 'UTC' })} ➜ <br/>
+                                  {new Date(b.checkOut).toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { timeZone: 'UTC' })}
                                 </td>
                                 <td style={{ fontSize: '0.8rem' }}>
                                   {b.accommodationId === 'capsule' ? (
-                                    <span className="badge badge-cyan">Cápsula</span>
+                                    <span className="badge badge-cyan">{t('admin_badge_capsule')}</span>
                                   ) : b.accommodationId === 'private_room_bath' ? (
-                                    <span className="badge badge-magenta">Cuarto c/Baño</span>
+                                    <span className="badge badge-magenta">{t('admin_badge_room_bath')}</span>
                                   ) : (
-                                    <span className="badge badge-gold">Cuarto s/Baño</span>
+                                    <span className="badge badge-gold">{t('admin_badge_room_no_bath')}</span>
                                   )}
                                 </td>
                                 <td className="mono-text" style={{ textAlign: 'center' }}>
@@ -592,9 +824,13 @@ export default function AdminDashboard() {
                                 </td>
                                 <td>
                                   {b.paymentStatus === 'completed' ? (
-                                    <span className="badge badge-cyan" style={{ fontSize: '0.7rem' }}>Completo ({b.paymentMethod})</span>
+                                    <span className="badge badge-cyan" style={{ fontSize: '0.7rem' }}>
+                                      {t('admin_badge_payment_completed')} ({b.paymentMethod})
+                                    </span>
                                   ) : (
-                                    <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>Pendiente ({b.paymentMethod})</span>
+                                    <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>
+                                      {t('admin_badge_payment_pending')} ({b.paymentMethod})
+                                    </span>
                                   )}
                                 </td>
                                 <td className="mono-text" style={{ fontWeight: 600 }}>${b.totalPrice}</td>
@@ -607,7 +843,7 @@ export default function AdminDashboard() {
                                         onClick={() => setViewingReceipt(b)}
                                         className="cyber-btn cyber-btn-outline"
                                         style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center' }}
-                                        title="Ver comprobante bancario"
+                                        title={lang === 'es' ? 'Ver comprobante bancario' : 'View bank receipt'}
                                       >
                                         <Eye style={{ width: '12px', height: '12px' }} />
                                       </button>
@@ -619,9 +855,9 @@ export default function AdminDashboard() {
                                         onClick={() => handleConfirmPayment(b.id)}
                                         className="cyber-btn cyber-btn-cyan"
                                         style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem' }}
-                                        title="Confirmar recepción de transferencia"
+                                        title={t('admin_action_confirm')}
                                       >
-                                        <Check style={{ width: '12px', height: '12px' }} /> Confirmar
+                                        <Check style={{ width: '12px', height: '12px' }} /> {t('admin_action_confirm')}
                                       </button>
                                     )}
 
@@ -631,16 +867,16 @@ export default function AdminDashboard() {
                                         onClick={() => setCheckingInBooking(b)}
                                         className="cyber-btn"
                                         style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem', background: 'var(--color-amber-gold)', color: '#020409' }}
-                                        title="Hacer check-in y asignar cabina física"
+                                        title={t('admin_action_checkin')}
                                       >
-                                        <Key style={{ width: '12px', height: '12px' }} /> Check-in
+                                        <Key style={{ width: '12px', height: '12px' }} /> {t('admin_action_checkin')}
                                       </button>
                                     )}
 
                                     {/* Checked In status label */}
                                     {isCheckedIn && (
                                       <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'inline-flex', alignItems: 'center' }}>
-                                        Activo en Pod
+                                        {t('admin_action_active')}
                                       </span>
                                     )}
 
@@ -650,7 +886,7 @@ export default function AdminDashboard() {
                                         onClick={() => handleCancelBooking(b.id)}
                                         className="cyber-btn"
                                         style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem', background: 'rgba(255,0,150,0.1)', color: 'var(--color-magenta-neon)', border: '1px solid var(--color-magenta-neon)' }}
-                                        title="Cancelar Reservación"
+                                        title={lang === 'es' ? 'Cancelar Reservación' : 'Cancel Reservation'}
                                       >
                                         <X style={{ width: '12px', height: '12px' }} />
                                       </button>
@@ -671,25 +907,25 @@ export default function AdminDashboard() {
               {/* TAB 3: CUSTOMERS LOYALTY LIST */}
               {activeTab === 'customers' && stats && (
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Base de Clientes Frecuentes (CRM de Fidelidad)</h3>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>{t('admin_crm_title')}</h3>
                   
                   <div className="cyber-table-container">
                     <table className="cyber-table">
                       <thead>
                         <tr>
-                          <th>Nombre Huésped</th>
-                          <th>WhatsApp Mobile</th>
-                          <th>Email</th>
-                          <th>Visitas Realizadas</th>
-                          <th>Monto Total Pagado</th>
-                          <th>Último Check-In</th>
+                          <th>{t('admin_crm_name')}</th>
+                          <th>{t('admin_crm_phone')}</th>
+                          <th>{t('admin_crm_email')}</th>
+                          <th>{t('admin_crm_visits')}</th>
+                          <th>{t('admin_crm_spent')}</th>
+                          <th>{t('admin_crm_last_checkin')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {stats.allCustomers.length === 0 ? (
                           <tr>
                             <td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '3rem' }}>
-                              No hay registros de clientes en la base de datos.
+                              {t('admin_crm_empty')}
                             </td>
                           </tr>
                         ) : (
@@ -705,7 +941,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="mono-text" style={{ fontWeight: 600 }}>${c.totalSpent.toLocaleString()} MXN</td>
                               <td className="mono-text" style={{ fontSize: '0.8rem' }}>
-                                {new Date(c.lastBookingDate).toLocaleDateString('es-MX', { timeZone: 'UTC' })}
+                                {new Date(c.lastBookingDate).toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { timeZone: 'UTC' })}
                               </td>
                             </tr>
                           ))
@@ -719,73 +955,92 @@ export default function AdminDashboard() {
               {/* TAB 4: CATALOG PRICING MANAGER */}
               {activeTab === 'catalog' && (
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Configuración de Catálogo de Precios</h3>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>{t('admin_catalog_title')}</h3>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                    {catalog.map((item) => (
-                      <div key={item.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                            <h4 style={{ fontSize: '1.2rem' }}>{item.name}</h4>
-                            <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--color-text-secondary)' }} className="mono-text">
-                              ID: {item.id}
-                            </span>
-                          </div>
-                          
-                          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-                            {item.description}
-                          </p>
+                    {catalog.map((item) => {
+                      let translatedName = item.name;
+                      let translatedDesc = item.description;
+                      if (lang === 'en') {
+                        if (item.id === 'capsule') {
+                          translatedName = 'Single Sleep Pod';
+                          translatedDesc = 'Futuristic cabin with memory foam mattress, ambient LED lighting, private ventilation system, and universal power outlets.';
+                        } else if (item.id === 'private_room_bath') {
+                          translatedName = 'Private Room with Bathroom';
+                          translatedDesc = 'Spacious private cabin with integrated private bathroom, high-end shower amenities, double bed, smart control screen, and noise cancellation.';
+                        } else if (item.id === 'private_room_no_bath') {
+                          translatedName = 'Private Room without Bathroom';
+                          translatedDesc = 'Premium room for two guests with shared luxury bathrooms, double bed, custom climate control, and digital keyless access.';
+                        }
+                      }
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginBottom: '1.5rem' }}>
-                            <div>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Capacidad del Hotel</span>
-                              <p style={{ fontWeight: 'bold' }} className="mono-text">{item.capacity} {item.id === 'capsule' ? 'pods' : 'cuartos'}</p>
+                      return (
+                        <div key={item.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                              <h4 style={{ fontSize: '1.2rem' }}>{translatedName}</h4>
+                              <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--color-text-secondary)' }} className="mono-text">
+                                {t('admin_catalog_id')}: {item.id}
+                              </span>
                             </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Tarifa Actual</span>
-                              <p style={{ fontWeight: 'bold', color: item.id === 'capsule' ? 'var(--color-cyan-neon)' : 'var(--color-magenta-neon)', fontSize: '1.3rem' }} className="mono-text">
-                                ${item.basePrice} MXN
-                              </p>
+                            
+                            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                              {translatedDesc}
+                            </p>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginBottom: '1.5rem' }}>
+                              <div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{t('admin_catalog_capacity')}</span>
+                                <p style={{ fontWeight: 'bold' }} className="mono-text">
+                                  {item.capacity} {item.id === 'capsule' ? t('admin_catalog_pods') : t('admin_catalog_rooms')}
+                                </p>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{t('admin_catalog_rate')}</span>
+                                <p style={{ fontWeight: 'bold', color: item.id === 'capsule' ? 'var(--color-cyan-neon)' : 'var(--color-magenta-neon)', fontSize: '1.3rem' }} className="mono-text">
+                                  ${item.basePrice} MXN
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {updatingCatalogId === item.id ? (
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            <input
-                              type="number"
-                              placeholder="Nueva tarifa"
-                              value={newPriceValue}
-                              onChange={(e) => setNewPriceValue(e.target.value)}
-                              className="cyber-input"
-                              style={{ width: '130px', padding: '0.5rem' }}
-                            />
+                          {updatingCatalogId === item.id ? (
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <input
+                                type="number"
+                                placeholder={t('admin_catalog_placeholder')}
+                                value={newPriceValue}
+                                onChange={(e) => setNewPriceValue(e.target.value)}
+                                className="cyber-input"
+                                style={{ width: '130px', padding: '0.5rem' }}
+                              />
+                              <button
+                                onClick={() => handleUpdatePrice(item.id)}
+                                className="cyber-btn cyber-btn-cyan"
+                                style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+                              >
+                                {t('admin_catalog_save')}
+                              </button>
+                              <button
+                                onClick={() => { setUpdatingCatalogId(null); setNewPriceValue(''); }}
+                                className="cyber-btn cyber-btn-outline"
+                                style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
+                              >
+                                {t('admin_catalog_cancel')}
+                              </button>
+                            </div>
+                          ) : (
                             <button
-                              onClick={() => handleUpdatePrice(item.id)}
-                              className="cyber-btn cyber-btn-cyan"
-                              style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              onClick={() => { setUpdatingCatalogId(null); setNewPriceValue(''); }}
+                              onClick={() => { setUpdatingCatalogId(item.id); setNewPriceValue(item.basePrice.toString()); }}
                               className="cyber-btn cyber-btn-outline"
-                              style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
+                              style={{ width: '100%', borderColor: item.id === 'capsule' ? 'var(--color-cyan-neon)' : 'var(--color-magenta-neon)', color: item.id === 'capsule' ? 'var(--color-cyan-neon)' : 'var(--color-magenta-neon)' }}
                             >
-                              Cancelar
+                              {t('admin_catalog_edit')}
                             </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => { setUpdatingCatalogId(item.id); setNewPriceValue(item.basePrice.toString()); }}
-                            className="cyber-btn cyber-btn-outline"
-                            style={{ width: '100%', borderColor: item.id === 'capsule' ? 'var(--color-cyan-neon)' : 'var(--color-magenta-neon)', color: item.id === 'capsule' ? 'var(--color-cyan-neon)' : 'var(--color-magenta-neon)' }}
-                          >
-                            Modificar Tarifa
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -813,7 +1068,9 @@ export default function AdminDashboard() {
         }}>
           <div className="glass-panel" style={{ maxWidth: '550px', width: '100%', border: 'var(--border-neon-cyan)', boxShadow: 'var(--glow-cyan)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.25rem' }}>Comprobante de Pago ({viewingReceipt.id})</h3>
+              <h3 style={{ fontSize: '1.25rem' }}>
+                {lang === 'es' ? 'Comprobante de Pago' : 'Payment Receipt'} ({viewingReceipt.id})
+              </h3>
               <button
                 onClick={() => setViewingReceipt(null)}
                 style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}
@@ -824,14 +1081,16 @@ export default function AdminDashboard() {
             
             {viewingReceipt.receiptMimeType === 'application/pdf' ? (
               <div style={{ padding: '2rem 1rem', background: 'rgba(7,11,25,0.6)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', marginBottom: '1.5rem' }}>
-                <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>El comprobante es un archivo PDF.</p>
+                <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+                  {lang === 'es' ? 'El comprobante es un archivo PDF.' : 'The receipt is a PDF file.'}
+                </p>
                 <a
                   href={`data:${viewingReceipt.receiptMimeType};base64,${viewingReceipt.receiptBase64}`}
                   download={`comprobante-${viewingReceipt.id}.pdf`}
                   className="cyber-btn cyber-btn-cyan"
                   style={{ fontSize: '0.8rem' }}
                 >
-                  Descargar Comprobante PDF
+                  {lang === 'es' ? 'Descargar Comprobante PDF' : 'Download PDF Receipt'}
                 </a>
               </div>
             ) : (
@@ -854,7 +1113,7 @@ export default function AdminDashboard() {
                   className="cyber-btn cyber-btn-cyan"
                   style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
                 >
-                  Aprobar Depósito
+                  {lang === 'es' ? 'Aprobar Depósito' : 'Approve Deposit'}
                 </button>
               )}
               <button
@@ -862,7 +1121,7 @@ export default function AdminDashboard() {
                 className="cyber-btn cyber-btn-outline"
                 style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
               >
-                Cerrar
+                {lang === 'es' ? 'Cerrar' : 'Close'}
               </button>
             </div>
           </div>
@@ -886,7 +1145,9 @@ export default function AdminDashboard() {
         }}>
           <form onSubmit={handleCheckInSubmit} className="glass-panel" style={{ maxWidth: '450px', width: '100%', border: 'var(--border-neon-magenta)', boxShadow: 'var(--glow-magenta)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.25rem' }}>Procesar Check-in FIFO ({checkingInBooking.id})</h3>
+              <h3 style={{ fontSize: '1.25rem' }}>
+                {lang === 'es' ? 'Procesar Check-in FIFO' : 'Process FIFO Check-in'} ({checkingInBooking.id})
+              </h3>
               <button
                 type="button"
                 onClick={() => setCheckingInBooking(null)}
@@ -898,30 +1159,43 @@ export default function AdminDashboard() {
 
             <div style={{ marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
               <p style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.5rem' }}>
-                Huésped: {checkingInBooking.customerName}
+                {lang === 'es' ? 'Huésped' : 'Guest'}: {checkingInBooking.customerName}
               </p>
-              <p>Tipo de Alojamiento: {checkingInBooking.accommodationId === 'capsule' ? 'Cápsula Individual (Pod)' : checkingInBooking.accommodationId === 'private_room_bath' ? 'Cuarto con Baño Privado' : 'Cuarto sin Baño Privado'}</p>
+              <p>
+                {lang === 'es' ? 'Tipo de Alojamiento' : 'Accommodation Type'}: {checkingInBooking.accommodationId === 'capsule' 
+                  ? (lang === 'es' ? 'Cápsula Individual (Pod)' : 'Single Sleep Pod') 
+                  : checkingInBooking.accommodationId === 'private_room_bath' 
+                    ? (lang === 'es' ? 'Cuarto con Baño Privado' : 'Room with Private Bath') 
+                    : (lang === 'es' ? 'Cuarto sin Baño Privado' : 'Room without Private Bath')
+                }
+              </p>
               <p style={{ marginTop: '0.5rem' }}>
-                *Las cápsulas se asignan al llegar el huésped (FIFO). Elige un número de cabina/cuarto libre para registrarlo operacionalmente.
+                {lang === 'es'
+                  ? '*Las cápsulas se asignan al llegar el huésped (FIFO). Elige un número de cabina/cuarto libre para registrarlo operacionalmente.'
+                  : '*Pods are assigned upon guest arrival (FIFO). Choose a free cabin/room number to register it operationally.'
+                }
               </p>
             </div>
 
             <div className="cyber-form-group" style={{ marginBottom: '1.5rem' }}>
               <label className="cyber-label">
-                Número de Cabina física asignada
+                {lang === 'es' ? 'Número de Cabina física asignada' : 'Assigned physical Cabin number'}
               </label>
               <input
                 type="number"
                 min="1"
                 max={checkingInBooking.accommodationId === 'capsule' ? 40 : 1}
                 required
-                placeholder={checkingInBooking.accommodationId === 'capsule' ? "Ej. 1-40" : "Ej. 1"}
+                placeholder={checkingInBooking.accommodationId === 'capsule' ? (lang === 'es' ? "Ej. 1-40" : "E.g. 1-40") : "Ej. 1"}
                 value={assignedPodNumber}
                 onChange={(e) => setAssignedPodNumber(e.target.value)}
                 className="cyber-input"
               />
               <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-                Rango permitido: {checkingInBooking.accommodationId === 'capsule' ? 'Cabina 1 a 40' : 'Habitación 1 (Cupo Único)'}
+                {lang === 'es'
+                  ? `Rango permitido: ${checkingInBooking.accommodationId === 'capsule' ? 'Cabina 1 a 40' : 'Habitación 1 (Cupo Único)'}`
+                  : `Allowed range: ${checkingInBooking.accommodationId === 'capsule' ? 'Cabin 1 to 40' : 'Room 1 (Single Slot)'}`
+                }
               </span>
             </div>
 
@@ -932,7 +1206,10 @@ export default function AdminDashboard() {
                 className="cyber-btn cyber-btn-cyan"
                 style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
               >
-                {actionLoading ? 'Procesando...' : 'Asignar Cabina y Activar Check-In'}
+                {actionLoading 
+                  ? (lang === 'es' ? 'Procesando...' : 'Processing...') 
+                  : (lang === 'es' ? 'Asignar Cabina y Activar Check-In' : 'Assign Cabin & Activate Check-In')
+                }
               </button>
               <button
                 type="button"
@@ -940,7 +1217,7 @@ export default function AdminDashboard() {
                 className="cyber-btn cyber-btn-outline"
                 style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
               >
-                Cancelar
+                {t('admin_catalog_cancel')}
               </button>
             </div>
           </form>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar, User, Mail, Phone, CreditCard, Send, Sparkles, Shield, Compass, CheckCircle, Upload, ArrowRight, Activity, Loader2 } from 'lucide-react';
+import { translations } from '@/lib/translations';
 
 interface AvailabilityData {
   products: {
@@ -18,6 +19,25 @@ interface AvailabilityData {
 }
 
 export default function Home() {
+  // Language state
+  const [lang, setLang] = useState<'es' | 'en'>('es');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('capsule_lang') as 'es' | 'en';
+    if (saved === 'es' || saved === 'en') {
+      setLang(saved);
+    }
+  }, []);
+
+  const changeLang = (l: 'es' | 'en') => {
+    setLang(l);
+    localStorage.setItem('capsule_lang', l);
+  };
+
+  const t = (key: keyof typeof translations.es) => {
+    return translations[lang][key] || translations.es[key];
+  };
+
   // Dates state
   const getTodayString = (offsetDays = 0) => {
     const d = new Date();
@@ -96,7 +116,7 @@ export default function Home() {
   const fetchAvailability = async () => {
     if (!checkIn || !checkOut) return;
     if (new Date(checkIn) >= new Date(checkOut)) {
-      setErrorAvail('La fecha de check-in debe ser anterior a la de check-out.');
+      setErrorAvail(t('date_error'));
       setAvailability(null);
       return;
     }
@@ -107,7 +127,7 @@ export default function Home() {
       const res = await fetch(`/api/availability?checkIn=${checkIn}&checkOut=${checkOut}`);
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Error al obtener la disponibilidad.');
+        throw new Error(data.error || (lang === 'es' ? 'Error al obtener la disponibilidad.' : 'Error fetching availability.'));
       }
       setAvailability(data);
     } catch (err: any) {
@@ -142,11 +162,11 @@ export default function Home() {
   // Form validation
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
-    if (!fullName.trim()) errors.fullName = 'El nombre completo es requerido.';
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) errors.email = 'Introduce un email válido.';
-    if (!phone.trim() || phone.length < 10) errors.phone = 'Introduce un número celular válido (mínimo 10 dígitos).';
+    if (!fullName.trim()) errors.fullName = t('full_name_error');
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) errors.email = t('email_error');
+    if (!phone.trim() || phone.length < 10) errors.phone = t('phone_error');
     if (paymentMethod === 'transfer' && !receiptBase64) {
-      errors.receipt = 'Debes subir tu comprobante de transferencia bancaria.';
+      errors.receipt = t('payment_transfer_error');
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -184,7 +204,7 @@ export default function Home() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Error al procesar tu reserva.');
+        throw new Error(data.error || (lang === 'es' ? 'Error al procesar tu reserva.' : 'Error processing your booking.'));
       }
 
       setConfirmedBooking(data.booking);
@@ -196,7 +216,7 @@ export default function Home() {
       setReceiptBase64(null);
       setReceiptMimeType(null);
     } catch (err: any) {
-      showToast(err.message || 'Error al completar la reservación.', 'error');
+      showToast(err.message || (lang === 'es' ? 'Error al completar la reservación.' : 'Error completing reservation.'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -230,10 +250,27 @@ export default function Home() {
             />
           </a>
           <nav style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <a href="/" style={{ color: 'var(--color-cyan-neon)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>Reservar</a>
-            <a href="/admin" className="cyber-btn cyber-btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
-              Admin Portal
+            <a href="/" style={{ color: 'var(--color-cyan-neon)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>
+              {t('step_1_title').split(' ').slice(0, 1).join('') || (lang === 'es' ? 'Reservar' : 'Book')}
             </a>
+            
+            {/* Language Selector */}
+            <button
+              onClick={() => changeLang(lang === 'es' ? 'en' : 'es')}
+              className="cyber-btn cyber-btn-outline"
+              style={{
+                padding: '0.4rem 0.8rem',
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-jetbrains-mono)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: 'pointer'
+              }}
+            >
+              <span>🌐</span>
+              <span style={{ fontWeight: 'bold' }}>{lang === 'es' ? 'EN' : 'ES'}</span>
+            </button>
           </nav>
         </div>
       </header>
@@ -246,14 +283,14 @@ export default function Home() {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem', borderRadius: '30px', background: 'rgba(0, 234, 255, 0.08)', border: 'var(--border-neon-cyan)', marginBottom: '1.5rem' }}>
             <Sparkles style={{ width: '14px', height: '14px', color: 'var(--color-cyan-neon)' }} />
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-cyan-neon)', textTransform: 'uppercase', letterSpacing: '0.05em' }} className="mono-text">
-              La revolución del descanso en la CDMX
+              {t('hero_badge')}
             </span>
           </div>
           <h2 style={{ fontSize: '3.5rem', fontWeight: 800, maxWidth: '900px', margin: '0 auto 1rem auto', lineHeight: 1.1 }}>
-            Hospedaje de Próxima Generación en la <span className="text-glow-cyan">Condesa</span>
+            {t('hero_title_1')}<span className="text-glow-cyan">{t('hero_title_2')}</span>
           </h2>
           <p style={{ color: 'var(--color-text-secondary)', maxWidth: '600px', margin: '0 auto', fontSize: '1.1rem', lineHeight: 1.6 }}>
-            Cabinas de descanso futuristas equipadas con climatización inteligente, aislamiento acústico y luz personalizable en la zona más emblemática de la Ciudad de México.
+            {t('hero_subtitle')}
           </p>
         </div>
 
@@ -265,14 +302,14 @@ export default function Home() {
             <section className="glass-panel" style={{ borderLeft: '3px solid var(--color-cyan-neon)' }}>
               <h3 style={{ fontSize: '1.3rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <span style={{ background: 'var(--color-cyan-neon)', color: '#020409', width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifySelf: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }} className="mono-text">1</span>
-                Elige tus fechas y consulta disponibilidad
+                {t('step_1_title')}
               </h3>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                 <div className="cyber-form-group">
                   <label className="cyber-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Calendar style={{ width: '16px', height: '16px', color: 'var(--color-cyan-neon)' }} />
-                    Fecha de Entrada (Check-In)
+                    {t('check_in_label')}
                   </label>
                   <input
                     type="date"
@@ -285,7 +322,7 @@ export default function Home() {
                 <div className="cyber-form-group">
                   <label className="cyber-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Calendar style={{ width: '16px', height: '16px', color: 'var(--color-cyan-neon)' }} />
-                    Fecha de Salida (Check-Out)
+                    {t('check_out_label')}
                   </label>
                   <input
                     type="date"
@@ -306,7 +343,7 @@ export default function Home() {
               {loadingAvail ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 0', gap: '1rem' }}>
                   <Loader2 className="pulse-indicator" style={{ width: '40px', height: '40px', color: 'var(--color-cyan-neon)', animation: 'spin 1.5s linear infinite' }} />
-                  <p className="mono-text" style={{ fontSize: '0.85rem', color: 'var(--color-cyan-neon)' }}>Buscando cabinas disponibles...</p>
+                  <p className="mono-text" style={{ fontSize: '0.85rem', color: 'var(--color-cyan-neon)' }}>{t('loading_avail')}</p>
                   <style jsx global>{`
                     @keyframes spin {
                       0% { transform: rotate(0deg); }
@@ -328,6 +365,22 @@ export default function Home() {
                         const textGlowClass = getProductTextGlowClass(prod.id);
                         const isAvailable = prod.available > 0;
 
+                        // Translate product name & description dynamically if needed (or use DB values as fallback)
+                        let translatedName = prod.name;
+                        let translatedDesc = prod.description;
+                        if (lang === 'en') {
+                          if (prod.id === 'capsule') {
+                            translatedName = 'Single Sleep Pod';
+                            translatedDesc = 'Futuristic cabin with memory foam mattress, ambient LED lighting, private ventilation system, and universal power outlets.';
+                          } else if (prod.id === 'private_room_bath') {
+                            translatedName = 'Private Room with Bathroom';
+                            translatedDesc = 'Spacious private cabin with integrated private bathroom, high-end shower amenities, double bed, smart control screen, and noise cancellation.';
+                          } else if (prod.id === 'private_room_no_bath') {
+                            translatedName = 'Private Room without Bathroom';
+                            translatedDesc = 'Premium room for two guests with shared luxury bathrooms, double bed, custom climate control, and digital keyless access.';
+                          }
+                        }
+
                         return (
                           <div 
                             key={prod.id}
@@ -348,17 +401,17 @@ export default function Home() {
                           >
                             <div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                                <h4 style={{ fontSize: '1.2rem', paddingRight: '0.5rem' }}>{prod.name}</h4>
+                                <h4 style={{ fontSize: '1.2rem', paddingRight: '0.5rem' }}>{translatedName}</h4>
                                 <div style={{ textAlign: 'right', minWidth: '90px' }}>
                                   <span style={{ fontSize: '1.4rem', fontWeight: 'bold' }} className={`price-display ${textGlowClass}`}>
                                     ${prod.basePrice}
                                   </span>
-                                  <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', display: 'block' }}>MXN / Noche</span>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', display: 'block' }}>{lang === 'es' ? 'MXN / Noche' : 'MXN / Night'}</span>
                                 </div>
                               </div>
                               
                               <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-                                {prod.description}
+                                {translatedDesc}
                               </p>
                             </div>
 
@@ -367,8 +420,8 @@ export default function Home() {
                                 <Activity style={{ width: '16px', height: '16px', color: isAvailable ? color : 'var(--color-text-muted)' }} />
                                 <span className="mono-text" style={{ fontSize: '0.75rem', fontWeight: 600, color: isAvailable ? color : 'var(--color-text-muted)' }}>
                                   {!isAvailable 
-                                    ? 'SIN CUPO' 
-                                    : `${prod.available} de ${prod.capacity} libres`}
+                                    ? t('no_vacancy') 
+                                    : t('free_units').replace('{available}', prod.available.toString()).replace('{capacity}', prod.capacity.toString())}
                                 </span>
                               </div>
                               
@@ -384,7 +437,7 @@ export default function Home() {
                                     boxShadow: isSelected ? glow : 'none'
                                   }}
                                 >
-                                  {isSelected ? 'Seleccionado' : 'Seleccionar'}
+                                  {isSelected ? t('selected') : t('select')}
                                 </div>
                               )}
                             </div>
@@ -406,18 +459,18 @@ export default function Home() {
                 <section className="glass-panel" style={{ borderLeft: '3px solid var(--color-amber-gold)' }}>
                   <h3 style={{ fontSize: '1.3rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ background: 'var(--color-amber-gold)', color: '#020409', width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }} className="mono-text">2</span>
-                    Tus Datos de Contacto
+                    {t('step_2_title')}
                   </h3>
 
                   <form onSubmit={(e) => e.preventDefault()}>
                     <div className="cyber-form-group">
                       <label className="cyber-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <User style={{ width: '14px', height: '14px', color: 'var(--color-amber-gold)' }} />
-                        Nombre Completo
+                        {t('full_name')}
                       </label>
                       <input
                         type="text"
-                        placeholder="Ej. Juan Pérez López"
+                        placeholder={t('full_name_placeholder')}
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         className={`cyber-input ${formErrors.fullName ? 'error' : ''}`}
@@ -428,11 +481,11 @@ export default function Home() {
                     <div className="cyber-form-group">
                       <label className="cyber-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Mail style={{ width: '14px', height: '14px', color: 'var(--color-amber-gold)' }} />
-                        Email de Contacto
+                        {t('email_label')}
                       </label>
                       <input
                         type="email"
-                        placeholder="ejemplo@correo.com"
+                        placeholder={t('email_placeholder')}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className={`cyber-input ${formErrors.email ? 'error' : ''}`}
@@ -443,11 +496,11 @@ export default function Home() {
                     <div className="cyber-form-group">
                       <label className="cyber-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Phone style={{ width: '14px', height: '14px', color: 'var(--color-amber-gold)' }} />
-                        Celular (WhatsApp)
+                        {t('phone_label')}
                       </label>
                       <input
                         type="tel"
-                        placeholder="5512345678"
+                        placeholder={t('phone_placeholder')}
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         className={`cyber-input ${formErrors.phone ? 'error' : ''}`}
@@ -462,7 +515,7 @@ export default function Home() {
                   <div>
                     <h3 style={{ fontSize: '1.3rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span style={{ background: 'var(--color-blue-electric)', color: '#ffffff', width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }} className="mono-text">3</span>
-                      Método de Pago
+                      {t('step_3_title')}
                     </h3>
 
                     {/* Resumen de Cotización */}
@@ -474,19 +527,22 @@ export default function Home() {
                       marginBottom: '1.5rem'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                        <span>Alojamiento:</span>
+                        <span>{t('summary_accommodation')}</span>
                         <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
-                          {availability.products[selectedAcc].name}
+                          {lang === 'es' ? availability.products[selectedAcc].name : (
+                            selectedAcc === 'capsule' ? 'Single Sleep Pod' : 
+                            selectedAcc === 'private_room_bath' ? 'Private Room with Bathroom' : 'Private Room without Bathroom'
+                          )}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                        <span>Noches:</span>
+                        <span>{t('summary_nights')}</span>
                         <span style={{ color: 'var(--color-text-primary)' }} className="mono-text">
-                          {availability.numberOfNights} noches
+                          {availability.numberOfNights} {t('summary_nights_unit')}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                        <span style={{ fontWeight: 600 }}>Total Cotizado:</span>
+                        <span style={{ fontWeight: 600 }}>{t('summary_total')}</span>
                         <span style={{ fontWeight: 'bold', color: getProductColor(selectedAcc) }} className="mono-text price-display">
                           ${getSelectedPrice()} MXN
                         </span>
@@ -494,7 +550,7 @@ export default function Home() {
                       
                       <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Shield style={{ width: '12px', height: '12px' }} />
-                        Cupo bloqueado temporalmente por 10 min en checkout.
+                        {t('summary_footnote')}
                       </div>
                     </div>
 
@@ -542,27 +598,27 @@ export default function Home() {
                         }}
                       >
                         <Send style={{ width: '16px', height: '16px' }} />
-                        Transferencia
+                        {lang === 'es' ? 'Transferencia' : 'Bank Transfer'}
                       </button>
                     </div>
 
                     {/* Contenido según método de pago */}
                     {paymentMethod === 'paypal' ? (
                       <div style={{ background: 'rgba(7,11,25,0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: 1.4, color: 'var(--color-text-secondary)' }}>
-                        <p style={{ marginBottom: '0.5rem' }}>Al hacer clic en pagar, abrirás el checkout seguro de PayPal.</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>*Nota: Este es un entorno Sandbox seguro para demostración.</p>
+                        <p style={{ marginBottom: '0.5rem' }}>{t('payment_paypal_desc')}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{t('payment_paypal_footnote')}</p>
                       </div>
                     ) : (
                       <div style={{ background: 'rgba(7,11,25,0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '1.5rem', fontSize: '0.8rem', lineHeight: 1.4 }}>
-                        <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Datos para Transferencia:</p>
-                        <p style={{ color: 'var(--color-text-secondary)' }}>Banco: <span style={{ color: 'var(--color-text-primary)' }}>STP / BBVA</span></p>
-                        <p style={{ color: 'var(--color-text-secondary)' }}>Beneficiario: <span style={{ color: 'var(--color-text-primary)' }}>Cápsula Condesa SA de CV</span></p>
-                        <p style={{ color: 'var(--color-text-secondary)' }}>CLABE: <span style={{ color: 'var(--color-cyan-neon)' }} className="mono-text">0121 8001 2345 6789 01</span></p>
+                        <p style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>{t('payment_transfer_title')}</p>
+                        <p style={{ color: 'var(--color-text-secondary)' }}>{t('payment_transfer_bank')}</p>
+                        <p style={{ color: 'var(--color-text-secondary)' }}>{t('payment_transfer_beneficiary')}</p>
+                        <p style={{ color: 'var(--color-text-secondary)' }}>{t('payment_transfer_clabe')}</p>
                         
                         <div className="cyber-form-group" style={{ marginTop: '1rem' }}>
                           <label className="cyber-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
                             <Upload style={{ width: '14px', height: '14px', color: 'var(--color-cyan-neon)' }} />
-                            Sube tu comprobante (PNG/JPG/PDF)
+                            {t('payment_transfer_upload')}
                           </label>
                           <input
                             type="file"
@@ -585,7 +641,7 @@ export default function Home() {
                             textAlign: 'center',
                             fontSize: '0.8rem'
                           }}>
-                            {receiptFile ? `Archivo: ${receiptFile.name.substring(0, 20)}...` : 'Haga clic para buscar archivo'}
+                            {receiptFile ? t('payment_transfer_file').replace('{name}', receiptFile.name.substring(0, 20)) : t('payment_transfer_search')}
                           </label>
                           {formErrors.receipt && <span className="error-text">{formErrors.receipt}</span>}
                         </div>
@@ -608,11 +664,11 @@ export default function Home() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="pulse-indicator" style={{ width: '16px', height: '16px', marginRight: '0.5rem', animation: 'spin 1.5s linear infinite' }} />
-                        Procesando Reservación...
+                        {t('submitting_booking')}
                       </>
                     ) : (
                       <>
-                        {paymentMethod === 'paypal' ? 'Proceder al Pago con PayPal' : 'Enviar Comprobante y Confirmar'}
+                        {paymentMethod === 'paypal' ? t('btn_pay_paypal') : t('btn_confirm_transfer')}
                         <ArrowRight style={{ width: '16px', height: '16px', marginLeft: '0.5rem' }} />
                       </>
                     )}
@@ -653,13 +709,13 @@ export default function Home() {
             </div>
 
             <h3 style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>
-              {confirmedBooking.paymentStatus === 'completed' ? '¡Reserva Confirmada!' : '¡Reserva Registrada!'}
+              {confirmedBooking.paymentStatus === 'completed' ? t('confirm_title_completed') : t('confirm_title_pending')}
             </h3>
             
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
               {confirmedBooking.paymentStatus === 'completed' 
-                ? 'Hemos recibido tu pago de forma segura mediante PayPal. Tu código de reserva se encuentra activo y listo para tu llegada.'
-                : 'Hemos registrado tu reservación y comprobante de transferencia bancaria. Tu código está bloqueado de forma segura mientras nuestro equipo valida el depósito en recepción.'
+                ? t('confirm_desc_completed')
+                : t('confirm_desc_pending')
               }
             </p>
 
@@ -672,36 +728,36 @@ export default function Home() {
               textAlign: 'left'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>Código de Reserva:</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{t('confirm_code')}</span>
                 <span className="booking-code text-glow-cyan" style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
                   {confirmedBooking.id}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--color-text-secondary)' }}>Huésped:</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{t('confirm_guest')}</span>
                 <span style={{ fontWeight: 600 }}>{confirmedBooking.customerName}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--color-text-secondary)' }}>Alojamiento:</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{t('confirm_accommodation')}</span>
                 <span>
                   {confirmedBooking.accommodationId === 'capsule' 
-                    ? 'Cápsula Individual (Pod)' 
+                    ? (lang === 'es' ? 'Cápsula Individual (Pod)' : 'Single Capsule (Pod)') 
                     : confirmedBooking.accommodationId === 'private_room_bath' 
-                      ? 'Cuarto con Baño Privado' 
-                      : 'Cuarto sin Baño Privado'
+                      ? (lang === 'es' ? 'Cuarto con Baño Privado' : 'Room with Private Bath') 
+                      : (lang === 'es' ? 'Cuarto sin Baño Privado' : 'Room without Private Bath')
                   }
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--color-text-secondary)' }}>Check-in:</span>
-                <span className="mono-text">{new Date(confirmedBooking.checkIn).toLocaleDateString('es-MX', { timeZone: 'UTC' })}</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{t('confirm_check_in')}</span>
+                <span className="mono-text">{new Date(confirmedBooking.checkIn).toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { timeZone: 'UTC' })}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--color-text-secondary)' }}>Check-out:</span>
-                <span className="mono-text">{new Date(confirmedBooking.checkOut).toLocaleDateString('es-MX', { timeZone: 'UTC' })}</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{t('confirm_check_out')}</span>
+                <span className="mono-text">{new Date(confirmedBooking.checkOut).toLocaleDateString(lang === 'es' ? 'es-MX' : 'en-US', { timeZone: 'UTC' })}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.75rem', marginTop: '0.75rem', fontWeight: 'bold' }}>
-                <span>Monto Total:</span>
+                <span>{t('confirm_total')}</span>
                 <span className="price-display" style={{ color: getProductColor(confirmedBooking.accommodationId) }}>
                   ${confirmedBooking.totalPrice} MXN
                 </span>
@@ -714,16 +770,19 @@ export default function Home() {
                 className="cyber-btn cyber-btn-cyan"
                 style={{ width: '100%' }}
               >
-                Volver a la Página Principal
+                {t('btn_back_home')}
               </button>
               <a
-                href={`https://wa.me/525512345678?text=Hola,%20tengo%20una%20reserva%20con%20código%20${confirmedBooking.id}.`}
+                href={lang === 'es' 
+                  ? `https://wa.me/525512345678?text=Hola,%20tengo%20una%20reserva%20con%20código%20${confirmedBooking.id}.`
+                  : `https://wa.me/525512345678?text=Hello,%20I%20have%20a%20booking%20with%20code%20${confirmedBooking.id}.`
+                }
                 target="_blank"
                 rel="noreferrer"
                 className="cyber-btn cyber-btn-outline"
                 style={{ width: '100%', borderColor: '#25D366', color: '#25D366' }}
               >
-                Preguntas por WhatsApp
+                {t('btn_whatsapp_help')}
               </a>
             </div>
           </div>
@@ -732,24 +791,24 @@ export default function Home() {
         {/* HOTEL INFORMATION SECTION */}
         <section style={{ marginTop: '5rem' }}>
           <h3 style={{ fontSize: '1.8rem', textAlign: 'center', marginBottom: '2.5rem' }}>
-            Servicios Incluidos en tu Cabina
+            {t('services_title')}
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
             <div className="glass-panel">
-              <span className="text-glow-cyan" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>🛸 Climatización Privada</span>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>Cada cápsula cuenta con extractores silenciosos y flujo de aire independiente para mantener la temperatura óptima.</p>
+              <span className="text-glow-cyan" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{t('service_1_title')}</span>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{t('service_1_desc')}</p>
             </div>
             <div className="glass-panel">
-              <span className="text-glow-magenta" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>⚡ Puertos Cyber-Carga</span>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>Puertos USB, conectores universales y carga inalámbrica de alta velocidad justo al lado de tu colchón.</p>
+              <span className="text-glow-magenta" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{t('service_2_title')}</span>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{t('service_2_desc')}</p>
             </div>
             <div className="glass-panel">
-              <span className="text-glow-gold" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>☕ Coworking Premium</span>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>Acceso gratuito a nuestra área de coworking con café y té ilimitado, Wi-Fi simétrico y cabinas de llamadas acústicas.</p>
+              <span className="text-glow-gold" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{t('service_3_title')}</span>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{t('service_3_desc')}</p>
             </div>
             <div className="glass-panel">
-              <span className="text-glow-cyan" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>🔐 Seguridad Encriptada</span>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>Lockers con cerraduras digitales de alta seguridad y cámaras de videovigilancia 24/7 en pasillos principales.</p>
+              <span className="text-glow-cyan" style={{ display: 'block', fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{t('service_4_title')}</span>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{t('service_4_desc')}</p>
             </div>
           </div>
         </section>
@@ -767,12 +826,12 @@ export default function Home() {
       }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <p>© 2026 Cápsula Condesa. Todos los derechos reservados.</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Ubicación: Av. Insurgentes Sur, Colonia Condesa, CDMX.</p>
+            <p>{t('footer_copy')}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{t('footer_location')}</p>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
             <a href="https://hotelcapsulacondesa.com/?page_id=40" target="_blank" rel="noreferrer" style={{ color: 'var(--color-cyan-neon)', textDecoration: 'none' }}>
-              Sitio Oficial del Hotel
+              {t('footer_official')}
             </a>
           </div>
         </div>
