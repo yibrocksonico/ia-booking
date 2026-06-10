@@ -1,16 +1,16 @@
-# Guía de Despliegue en Google Cloud (Cloud SQL + Cloud Run)
+# Guía de Despliegue (Local vs Producción en Google Cloud)
 
-Esta guía detalla los pasos para configurar los entornos de **Desarrollo** y **Producción** del sistema **IA Booking** en la infraestructura de Google Cloud Platform (GCP).
+Esta guía detalla los pasos para configurar el entorno **Local** de desarrollo y el entorno de **Producción** (Google Cloud Platform con Cloud SQL + Cloud Run) del sistema **IA Booking**.
 
 ---
 
-## 🏗️ Requisitos Previos
+## 🏗️ Requisitos Previos (Para Producción)
 
-1. Una cuenta de Google Cloud y un proyecto creado (ej. `ia-booking-dev` y `ia-booking-prod`).
+1. Una cuenta de Google Cloud y un proyecto creado (ej. `ia-booking-prod`).
 2. Google Cloud CLI (`gcloud`) instalado y autenticado localmente:
    ```bash
    gcloud auth login
-   gcloud config set project ID_DE_TU_PROYECTO
+   gcloud config set project ID_DE_TU_PROYECTO_PROD
    ```
 3. Docker instalado y en ejecución localmente.
 
@@ -33,7 +33,7 @@ Utilizaremos **Cloud SQL (PostgreSQL)** como motor de base de datos para producc
      --region=us-central1 \
      --root-password="TU_CONTRASEÑA_SUPER_SEGURA"
    ```
-   *Nota: Para el entorno de desarrollo en GCP puedes usar la misma máquina `db-f1-micro` (la más económica) y para producción evaluar un tier superior (`db-custom-1-3840`) dependiendo del volumen de reservaciones.*
+   *Nota: La máquina `db-f1-micro` es la más económica y es ideal para el inicio del proyecto en producción; si la demanda escala, se puede cambiar de nivel de hardware fácilmente desde la consola de GCP.*
 
 3. **Crear la Base de Datos**:
    Crea la base de datos llamada `iabooking`:
