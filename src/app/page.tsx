@@ -829,9 +829,13 @@ export default function Home() {
             <p>{t('footer_copy')}</p>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{t('footer_location')}</p>
           </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <a href="https://hotelcapsulacondesa.com/?page_id=40" target="_blank" rel="noreferrer" style={{ color: 'var(--color-cyan-neon)', textDecoration: 'none' }}>
               {t('footer_official')}
+            </a>
+            <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+            <a href="https://www.escaperoomsmexico.com" target="_blank" rel="noreferrer" style={{ color: 'var(--color-cyan-neon)', textDecoration: 'none' }}>
+              Escaperooms México
             </a>
           </div>
         </div>
