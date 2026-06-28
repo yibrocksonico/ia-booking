@@ -112,6 +112,7 @@ export async function GET() {
     const paymentMethods = {
       paypal: confirmedOnly.filter((b) => b.paymentMethod === 'paypal').length,
       transfer: confirmedOnly.filter((b) => b.paymentMethod === 'transfer').length,
+      conekta: confirmedOnly.filter((b) => b.paymentMethod === 'conekta').length,
     };
 
     // 7. Distribution by accommodation type (dynamic from catalog)

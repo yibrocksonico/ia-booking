@@ -38,7 +38,12 @@ export async function sendConfirmationEmail(
     currency: 'MXN',
   }).format(booking.totalPrice);
 
-  const paymentMethodText = booking.paymentMethod === 'paypal' ? 'PayPal Sandbox' : 'Transferencia Bancaria';
+  const paymentMethodText = 
+    booking.paymentMethod === 'paypal' 
+      ? 'PayPal Sandbox' 
+      : booking.paymentMethod === 'conekta'
+        ? 'Tarjeta / OXXO / SPEI (Conekta)'
+        : 'Transferencia Bancaria';
   
   // HTML Email Template matching the premium futuristic styling of Cápsula Condesa
   const emailHtml = `

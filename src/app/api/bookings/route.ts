@@ -191,23 +191,101 @@ export async function POST(request: Request) {
     let bookingStatus = 'blocked';
     let pStatus = 'pending';
     let expiresAt: Date | null = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes block
+    let checkoutUrl: string | null = null;
 
     if (paymentMethod === 'paypal' && paymentStatus === 'completed') {
       bookingStatus = 'confirmed';
       pStatus = 'completed';
       expiresAt = null; // Confirmed bookings don't expire
     } else if (paymentMethod === 'transfer' && receiptBase64) {
-      // If client uploads transfer receipt, they request confirmation
-      // The admin needs to verify, but the block is locked for verification (or keep 10m block?
-      // Actually, for bank transfer with receipt, we keep it blocked and wait for admin approval.
-      // But we change status to "blocked" but we don't expire it immediately if receipt is uploaded!
-      // This is a crucial detail: if they upload a receipt, the reservation is "pending review", 
-      // so it shouldn't expire in 10 minutes. The admin must manually approve or reject it.
-      // So we set expiresAt = null and keep status = "blocked" (or "pending_verification" which we handle as blocked).
-      // Let's use status = "blocked" and expiresAt = null to keep the block permanently until the admin verifies it!)
       bookingStatus = 'blocked';
       pStatus = 'pending';
       expiresAt = null; // Permanent block until admin reviews the receipt
+    } else if (paymentMethod === 'conekta') {
+      bookingStatus = 'blocked';
+      pStatus = 'pending';
+      expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes block to allow payment process
+
+      // Create checkout session in Conekta
+      const conektaApiKey = process.env.CONEKTA_PRIVATE_KEY?.replace(/['"]/g, '');
+      if (!conektaApiKey) {
+        throw new Error('Conekta API Key is not configured on the server.');
+      }
+
+      // Ensure customer name has at least two words for Conekta validation
+      let formattedName = customerName.trim();
+      if (!formattedName.includes(' ')) {
+        formattedName = `${formattedName} Guest`;
+      }
+
+      // Format customer phone for Conekta validation (+CountryCode + Number)
+      let cleanPhone = customerPhone.replace(/\D/g, ''); // Keep only numbers
+      let formattedPhone = '';
+      if (cleanPhone.length === 10) {
+        formattedPhone = `+52${cleanPhone}`;
+      } else if (customerPhone.trim().startsWith('+')) {
+        formattedPhone = `+${cleanPhone}`;
+      } else {
+        formattedPhone = `+${cleanPhone}`;
+      }
+
+      // Checkout link expires in 2 days (minimum required by Conekta)
+      const expiresAtUnix = Math.floor(Date.now() / 1000) + 2 * 24 * 60 * 60;
+
+      const checkoutPayload = {
+        name: `Reserva ${bookingCode} - Cápsula Condesa`,
+        type: 'PaymentLink',
+        recurrent: false,
+        expires_at: expiresAtUnix,
+        allowed_payment_methods: ['card', 'cash', 'bank_transfer'],
+        needs_shipping_contact: false,
+        order_template: {
+          line_items: [
+            {
+              name: `Hospedaje - ${catalogItem.name}`,
+              unit_price: Math.round(totalPrice * 100), // in cents
+              quantity: 1,
+            },
+          ],
+          currency: 'MXN',
+          customer_info: {
+            name: formattedName,
+            email: customerEmail,
+            phone: formattedPhone,
+          },
+          metadata: {
+            booking_id: bookingCode,
+            accommodation_id: accommodationId,
+            check_in: checkInStr,
+            check_out: checkOutStr,
+            base_price: String(basePrice),
+            total_price: String(totalPrice),
+          },
+        },
+        checkout: {
+          type: 'HostedPayment',
+          success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/?bookingId=${bookingCode}&paymentStatus=completed`,
+          failure_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/?bookingId=${bookingCode}&paymentStatus=failed`,
+        },
+      };
+
+      const conektaRes = await fetch('https://api.conekta.io/checkouts', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/vnd.conekta-v2.2.0+json',
+          'content-type': 'application/json',
+          'Authorization': `Bearer ${conektaApiKey}`,
+        },
+        body: JSON.stringify(checkoutPayload),
+      });
+
+      const conektaData = await conektaRes.json();
+      if (!conektaRes.ok) {
+        console.error('Conekta error details:', conektaData);
+        throw new Error(conektaData.details?.[0]?.message || conektaData.message || 'Error al comunicarse con Conekta');
+      }
+
+      checkoutUrl = conektaData.url;
     }
 
     // Create the booking
@@ -243,6 +321,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       booking,
+      checkoutUrl,
     });
   } catch (error: any) {
     console.error('Error creating booking:', error);

@@ -49,6 +49,7 @@ interface StatsData {
   paymentMethods: {
     paypal: number;
     transfer: number;
+    conekta: number;
   };
   accommodationDistribution: {
     capsule: number;
@@ -715,6 +716,7 @@ export default function AdminDashboard() {
                           <span>{t('admin_distribution_methods')}</span>
                           <span style={{ color: 'var(--color-text-primary)' }}>
                             PayPal: <span className="mono-text text-glow-cyan">{stats.paymentMethods.paypal}</span> | 
+                            Conekta: <span className="mono-text text-glow-magenta">{stats.paymentMethods.conekta || 0}</span> | 
                             Transf: <span className="mono-text text-glow-gold">{stats.paymentMethods.transfer}</span>
                           </span>
                         </div>

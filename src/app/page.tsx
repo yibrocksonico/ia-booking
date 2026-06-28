@@ -63,7 +63,7 @@ export default function Home() {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   // Payment states
-  const [paymentMethod, setPaymentMethod] = useState<'paypal' | 'transfer'>('paypal');
+  const [paymentMethod, setPaymentMethod] = useState<'conekta' | 'transfer'>('conekta');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
   const [receiptMimeType, setReceiptMimeType] = useState<string | null>(null);
@@ -112,6 +112,86 @@ export default function Home() {
     fetchAvailability();
     setSelectedAcc(null); // Reset selection on date change
   }, [checkIn, checkOut]);
+
+  // Detect redirect from Conekta
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get('bookingId');
+    const paymentStatus = params.get('paymentStatus');
+
+    if (bookingId) {
+      // Clean up URL search parameters to keep it clean
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      if (paymentStatus === 'failed') {
+        showToast(
+          lang === 'es' 
+            ? 'El pago fue cancelado o no pudo procesarse.' 
+            : 'The payment was cancelled or could not be processed.',
+          'error'
+        );
+        return;
+      }
+
+      setIsSubmitting(true);
+      showToast(
+        lang === 'es' 
+          ? 'Verificando tu pago en Conekta...' 
+          : 'Verifying your payment with Conekta...',
+        'info'
+      );
+
+      let attempts = 0;
+      const checkStatus = async () => {
+        try {
+          const res = await fetch(`/api/bookings/status?id=${bookingId}`);
+          const data = await res.json();
+
+          if (res.ok && data.success && data.booking) {
+            const booking = data.booking;
+            if (booking.status === 'confirmed' || booking.paymentStatus === 'completed') {
+              setConfirmedBooking(booking);
+              showToast(
+                lang === 'es' 
+                  ? '¡Pago confirmado con éxito!' 
+                  : 'Payment confirmed successfully!',
+                'success'
+              );
+              setIsSubmitting(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Error verifying booking status:', err);
+        }
+
+        attempts++;
+        if (attempts < 6) {
+          setTimeout(checkStatus, 3000);
+        } else {
+          try {
+            const res = await fetch(`/api/bookings/status?id=${bookingId}`);
+            const data = await res.json();
+            if (res.ok && data.success && data.booking) {
+              setConfirmedBooking(data.booking);
+            } else {
+              showToast(
+                lang === 'es' 
+                  ? 'Tu reserva está siendo procesada. Si pagaste, recibirás tu correo pronto.' 
+                  : 'Your booking is being processed. If you paid, you will receive an email shortly.',
+                'info'
+              );
+            }
+          } catch (e) {
+            console.error(e);
+          }
+          setIsSubmitting(false);
+        }
+      };
+
+      setTimeout(checkStatus, 1500);
+    }
+  }, [lang]);
 
   const fetchAvailability = async () => {
     if (!checkIn || !checkOut) return;
@@ -187,14 +267,10 @@ export default function Home() {
         checkInStr: checkIn,
         checkOutStr: checkOut,
         paymentMethod,
-        paymentStatus: paymentMethod === 'paypal' ? 'completed' : 'pending',
+        paymentStatus: 'pending',
         receiptBase64: paymentMethod === 'transfer' ? receiptBase64 : null,
         receiptMimeType: paymentMethod === 'transfer' ? receiptMimeType : null,
       };
-
-      if (paymentMethod === 'paypal') {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
 
       const res = await fetch('/api/bookings', {
         method: 'POST',
@@ -205,6 +281,11 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || (lang === 'es' ? 'Error al procesar tu reserva.' : 'Error processing your booking.'));
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
       }
 
       setConfirmedBooking(data.booking);
@@ -555,17 +636,18 @@ export default function Home() {
                     </div>
 
                     {/* Selector de Pago */}
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod('paypal')}
+                        onClick={() => setPaymentMethod('conekta')}
                         style={{
                           flex: 1,
+                          minWidth: '140px',
                           padding: '0.6rem',
                           borderRadius: '8px',
-                          border: paymentMethod === 'paypal' ? `1px solid ${getProductColor(selectedAcc)}` : 'var(--border-glass)',
-                          background: paymentMethod === 'paypal' ? `${getProductColor(selectedAcc)}1a` : 'rgba(7, 11, 25, 0.4)',
-                          color: paymentMethod === 'paypal' ? getProductColor(selectedAcc) : 'var(--color-text-secondary)',
+                          border: paymentMethod === 'conekta' ? `1px solid ${getProductColor(selectedAcc)}` : 'var(--border-glass)',
+                          background: paymentMethod === 'conekta' ? `${getProductColor(selectedAcc)}1a` : 'rgba(7, 11, 25, 0.4)',
+                          color: paymentMethod === 'conekta' ? getProductColor(selectedAcc) : 'var(--color-text-secondary)',
                           cursor: 'pointer',
                           fontFamily: 'var(--font-space-grotesk)',
                           fontSize: '0.85rem',
@@ -576,13 +658,14 @@ export default function Home() {
                         }}
                       >
                         <CreditCard style={{ width: '16px', height: '16px' }} />
-                        PayPal
+                        {t('payment_conekta_label')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setPaymentMethod('transfer')}
                         style={{
                           flex: 1,
+                          minWidth: '140px',
                           padding: '0.6rem',
                           borderRadius: '8px',
                           border: paymentMethod === 'transfer' ? `1px solid ${getProductColor(selectedAcc)}` : 'var(--border-glass)',
@@ -598,15 +681,15 @@ export default function Home() {
                         }}
                       >
                         <Send style={{ width: '16px', height: '16px' }} />
-                        {lang === 'es' ? 'Transferencia' : 'Bank Transfer'}
+                        {lang === 'es' ? 'Transferencia Bancaria' : 'Bank Transfer'}
                       </button>
                     </div>
 
                     {/* Contenido según método de pago */}
-                    {paymentMethod === 'paypal' ? (
+                    {paymentMethod === 'conekta' ? (
                       <div style={{ background: 'rgba(7,11,25,0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: 1.4, color: 'var(--color-text-secondary)' }}>
-                        <p style={{ marginBottom: '0.5rem' }}>{t('payment_paypal_desc')}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{t('payment_paypal_footnote')}</p>
+                        <p style={{ marginBottom: '0.5rem' }}>{t('payment_conekta_desc')}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{t('payment_conekta_footnote')}</p>
                       </div>
                     ) : (
                       <div style={{ background: 'rgba(7,11,25,0.4)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '1.5rem', fontSize: '0.8rem', lineHeight: 1.4 }}>
@@ -668,7 +751,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        {paymentMethod === 'paypal' ? t('btn_pay_paypal') : t('btn_confirm_transfer')}
+                        {paymentMethod === 'conekta' ? t('btn_pay_conekta') : t('btn_confirm_transfer')}
                         <ArrowRight style={{ width: '16px', height: '16px', marginLeft: '0.5rem' }} />
                       </>
                     )}
@@ -715,7 +798,9 @@ export default function Home() {
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.5 }}>
               {confirmedBooking.paymentStatus === 'completed' 
                 ? t('confirm_desc_completed')
-                : t('confirm_desc_pending')
+                : confirmedBooking.paymentMethod === 'conekta'
+                  ? t('confirm_desc_conekta_pending')
+                  : t('confirm_desc_pending')
               }
             </p>
 

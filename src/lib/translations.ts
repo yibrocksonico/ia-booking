@@ -31,6 +31,9 @@ export interface Dictionary {
   summary_footnote: string;
   payment_paypal_desc: string;
   payment_paypal_footnote: string;
+  payment_conekta_label: string;
+  payment_conekta_desc: string;
+  payment_conekta_footnote: string;
   payment_transfer_title: string;
   payment_transfer_bank: string;
   payment_transfer_beneficiary: string;
@@ -40,12 +43,14 @@ export interface Dictionary {
   payment_transfer_file: string;
   payment_transfer_error: string;
   btn_pay_paypal: string;
+  btn_pay_conekta: string;
   btn_confirm_transfer: string;
   submitting_booking: string;
   confirm_title_completed: string;
   confirm_title_pending: string;
   confirm_desc_completed: string;
   confirm_desc_pending: string;
+  confirm_desc_conekta_pending: string;
   confirm_code: string;
   confirm_guest: string;
   confirm_accommodation: string;
@@ -182,6 +187,9 @@ export const translations: { es: Dictionary; en: Dictionary } = {
     summary_footnote: "Cupo bloqueado temporalmente por 10 min en checkout.",
     payment_paypal_desc: "Al hacer clic en pagar, abrirás el checkout seguro de PayPal.",
     payment_paypal_footnote: "*Nota: Este es un entorno Sandbox seguro para demostración.",
+    payment_conekta_label: "Pago Online (tarjeta crédito / debito)",
+    payment_conekta_desc: "Al hacer clic en pagar, abrirás la plataforma segura de Conekta donde podrás pagar de forma segura con Tarjeta de Crédito/Débito, efectivo en tiendas OXXO o transferencia SPEI.",
+    payment_conekta_footnote: "*Nota: Conexión cifrada de alta seguridad.",
     payment_transfer_title: "Datos para Transferencia:",
     payment_transfer_bank: "Banco: STP / BBVA",
     payment_transfer_beneficiary: "Beneficiario: Cápsula Condesa SA de CV",
@@ -191,12 +199,14 @@ export const translations: { es: Dictionary; en: Dictionary } = {
     payment_transfer_file: "Archivo: {name}",
     payment_transfer_error: "Debes subir tu comprobante de transferencia bancaria.",
     btn_pay_paypal: "Proceder al Pago con PayPal",
+    btn_pay_conekta: "Procede con el pago online",
     btn_confirm_transfer: "Enviar Comprobante y Confirmar",
     submitting_booking: "Procesando Reservación...",
     confirm_title_completed: "¡Reserva Confirmada!",
     confirm_title_pending: "¡Reserva Registrada!",
     confirm_desc_completed: "Hemos recibido tu pago de forma segura mediante PayPal. Tu código de reserva se encuentra activo y listo para tu llegada.",
     confirm_desc_pending: "Hemos registrado tu reservación y comprobante de transferencia bancaria. Tu código está bloqueado de forma segura mientras nuestro equipo valida el depósito en recepción.",
+    confirm_desc_conekta_pending: "Hemos registrado tu intención de pago. Si elegiste pagar en OXXO o SPEI, tu código de reserva se confirmará automáticamente en cuanto realices el pago.",
     confirm_code: "Código de Reserva:",
     confirm_guest: "Huésped:",
     confirm_accommodation: "Alojamiento:",
@@ -329,6 +339,9 @@ export const translations: { es: Dictionary; en: Dictionary } = {
     summary_footnote: "Spot temporarily blocked for 10 min during checkout.",
     payment_paypal_desc: "By clicking pay, you will open PayPal's secure checkout page.",
     payment_paypal_footnote: "*Note: This is a secure Sandbox environment for demonstration.",
+    payment_conekta_label: "Online Payment (credit / debit card)",
+    payment_conekta_desc: "By clicking pay, you will open Conekta's secure checkout page where you can pay securely by Credit/Debit Card, cash at OXXO, or SPEI bank transfer.",
+    payment_conekta_footnote: "*Note: High-security encrypted connection.",
     payment_transfer_title: "Bank Transfer Details:",
     payment_transfer_bank: "Bank: STP / BBVA",
     payment_transfer_beneficiary: "Beneficiary: Cápsula Condesa SA de CV",
@@ -338,12 +351,14 @@ export const translations: { es: Dictionary; en: Dictionary } = {
     payment_transfer_file: "File: {name}",
     payment_transfer_error: "You must upload your bank transfer receipt.",
     btn_pay_paypal: "Proceed to Pay with PayPal",
+    btn_pay_conekta: "Proceed with online payment",
     btn_confirm_transfer: "Send Receipt and Confirm",
     submitting_booking: "Processing Reservation...",
     confirm_title_completed: "Booking Confirmed!",
     confirm_title_pending: "Booking Registered!",
     confirm_desc_completed: "We have securely received your payment via PayPal. Your booking code is active and ready for your arrival.",
     confirm_desc_pending: "We have registered your reservation and bank transfer receipt. Your booking code is safely locked while our front desk validates the deposit.",
+    confirm_desc_conekta_pending: "We have registered your booking details. If you chose OXXO or SPEI, your booking code will be confirmed automatically once your payment is completed.",
     confirm_code: "Booking Code:",
     confirm_guest: "Guest:",
     confirm_accommodation: "Accommodation:",
