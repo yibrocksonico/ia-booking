@@ -28,11 +28,12 @@ Este documento define el mapa de ruta (roadmap) para el desarrollo, despliegue y
 
 ## 💳 Fase 3: Pasarelas de Pago e Integración (Completado)
 - [x] **Checkout Dinámico**:
-  - Integración de pago con **PayPal** (Botón inteligente de PayPal Sandbox/Producción).
-  - Integración de **Transferencia Bancaria** (Despliegue de datos CLABE, formulario para subir comprobante de pago).
+  - Integración de pago online seguro vía **Conekta** (Checkout Hospedado con soporte para Tarjeta, Efectivo/OXXO y SPEI).
+  - Integración de **Transferencia Bancaria** manual (Despliegue de datos CLABE, formulario para subir comprobante de pago).
+  - Remoción completa de **PayPal** del sistema de pagos y código del cliente.
 - [x] **Confirmación y Envío de Comprobante**:
   - Generación de código de reservación único con formato monoespaciado (`CB-XXXXX`).
-  - Envío automático de correo de confirmación de reserva (PayPal de forma inmediata; transferencia al confirmarse el pago por el admin en `/admin`).
+  - Envío automático de correo de confirmación de reserva (Conekta al confirmarse por Webhook; transferencia al confirmarse el pago por el admin en `/admin`).
   - Enlaces dinámicos de WhatsApp para contacto y soporte.
   - Integración del logotipo oficial `logo-hotel-capsula-condesa-horiz.webp` en las cabeceras de ambos portales y como favicon de pestaña.
 
@@ -48,7 +49,7 @@ Este documento define el mapa de ruta (roadmap) para el desarrollo, despliegue y
   - Interfaz de edición rápida para los precios de cápsulas individuales y cuartos privados.
 - [x] **Módulo de Reportes Sugeridos**:
   - Reportes mensuales de ingresos y ocupación.
-  - Distribución de métodos de pago (PayPal vs Transferencia).
+  - Distribución de métodos de pago (Conekta vs Transferencia).
   - Análisis de días de mayor demanda (para optimización de tarifas).
 
 ---
@@ -65,7 +66,7 @@ Este documento define el mapa de ruta (roadmap) para el desarrollo, despliegue y
 
 ---
 
-## ⚡ Fase 6: Verificación y Lanzamiento en Producción (Completado)
+## 🚀 Fase 6: Verificación y Lanzamiento en Producción (Completado)
 - [x] **Prueba de Conexión Segura**: Configurar la variable `DATABASE_URL` codificando los caracteres especiales de la contraseña y la ruta de conexión del socket de Cloud SQL.
 - [x] **Prueba de Extremo a Extremo en Producción**: Validar que la aplicación en Cloud Run se conecte exitosamente a la base de datos de producción (PostgreSQL en Cloud SQL) y permita el registro de reservas.
 
@@ -75,6 +76,15 @@ Este documento define el mapa de ruta (roadmap) para el desarrollo, despliegue y
 - [x] **Aislamiento y Login del Administrador**: Proteger el portal administrativo `/admin` mediante un panel de inicio de sesión con credenciales específicas y almacenamiento seguro de la sesión.
 - [x] **Soporte Bilingüe (Español / Inglés)**: Implementar internacionalización (i18n) completa mediante diccionario dinámico (`translations.ts`) y selector de idioma en el menú superior.
 - [x] **Manual de Operación**: Crear y documentar el manual de usuario de administración en [documentación/manual-usuario-admin.md](file:///d:/PROYECTOS/CAPSULA%20CONDESA/IA-BOOKING/documentación/manual-usuario-admin.md).
+
+---
+
+## 💳 Fase 8: Integración de Conekta y Limpieza de Métodos (En Progreso)
+- [x] **Desarrollo Backend**: Creación de órdenes de pago, validación y sanitización de números telefónicos y nombres de clientes para evitar fallos de la API de Conekta.
+- [x] **Webhook Conekta**: Endpoint `/api/webhooks/conekta` desarrollado para procesar confirmaciones automáticas de pago seguro y recrear reservas expiradas.
+- [x] **Interfaz de Usuario**: Botones de pago simplificados a: *Pago Online (tarjeta crédito / debito)* y *Transferencia Bancaria*.
+- [x] **Subido a Main**: Código compilado y subido exitosamente a la rama principal de Git.
+- [/] **Activación de Tarjetas en Sandbox (Pendiente)**: El usuario envió correo a `soporte@conekta.com` para que habiliten el procesador de tarjetas de crédito/débito en su cuenta de pruebas, ya que actualmente la columna de "Estado" de Tarjetas en su dashboard se encuentra vacía y el checkout hospedado solo renderiza SPEI y Efectivo.
 
 
 
